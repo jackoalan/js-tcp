@@ -1,0 +1,10 @@
+[Unit]
+Description=Joystick TCP Bridge
+Requires=network-online.target systemd-udev-settle.service
+
+[Service]
+ExecStart=js-tcp
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
