@@ -18,6 +18,7 @@ CMake and a C++ build environment (tested with gcc and clang)
 ```shell script
 cd <path-to-repository>
 mkdir build
+cd build
 cmake -DCMAKE_INSTALL_PREFIX=<path-to-distro-prefix> ..
 cmake --build .
 cmake --install .
