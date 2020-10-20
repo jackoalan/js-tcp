@@ -11,7 +11,9 @@ Simple Linux service to bridge joystick state to one or more push-transfer TCP c
 
 ### Requirements
 
-CMake and a C++ build environment (tested with gcc and clang)
+* C++11 build environment (tested with gcc8)
+* CMake 3.10+
+* udev development package (`libudev-dev` on debian-like distros)
 
 ### Building and Installing
 
