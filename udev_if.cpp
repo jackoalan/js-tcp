@@ -5,18 +5,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <libudev.h>
-#include <linux/joystick.h>
-#include <unistd.h>
 
-class udev_device_ptr {
-  udev_device *m_dev;
-
-public:
-  udev_device_ptr(udev_device *dev) : m_dev(dev) {}
-  operator udev_device *() const { return m_dev; }
-  ~udev_device_ptr() { udev_device_unref(m_dev); }
-};
+extern bool volatile g_terminate;
 
 udev_if::udev_if(const char *sysname) : m_sysname(sysname) {
   m_udev = udev_new();
@@ -43,12 +33,8 @@ udev_if::udev_if(const char *sysname) : m_sysname(sysname) {
   if (udev_device_ptr dev =
           udev_device_new_from_subsystem_sysname(m_udev, "input", sysname)) {
     const char *devnode = udev_device_get_devnode(dev);
-    m_device_fd = ::open(devnode, O_RDONLY | O_NONBLOCK);
-    if (m_device_fd == -1) {
-      if (errno == EINTR) {
-        m_monitor_fd = -1;
-        return;
-      }
+    m_joystick_fd = ::open(devnode, O_RDONLY | O_NONBLOCK);
+    if (m_joystick_fd == -1) {
       std::cerr << "error opening " << devnode
                 << " for reading: " << std::strerror(errno) << std::endl;
     } else {
@@ -57,39 +43,64 @@ udev_if::udev_if(const char *sysname) : m_sysname(sysname) {
   }
 }
 
+#define return_if_interrupted                                                  \
+  if (errno == EINTR)                                                          \
+  return
+
+static constexpr time_t update_interval = 10;
+
 void udev_if::event_loop(joystick_state &state, net_if &net) {
-  while (m_monitor_fd != -1) {
+  timeval timeout{update_interval, 0};
+  while (!g_terminate) {
+    /*
+     * Wait on one of three event sources:
+     * - udev monitor for controller reconnections
+     * - device file for controller events
+     * - TCP listen socket for new incoming connections
+     */
     fd_set read_fds;
     FD_ZERO(&read_fds);
     FD_SET(m_monitor_fd, &read_fds);
     int max_fd = m_monitor_fd;
-    if (m_device_fd != -1) {
-      FD_SET(m_device_fd, &read_fds);
-      max_fd = std::max(max_fd, m_device_fd);
+    if (m_joystick_fd != -1) {
+      FD_SET(m_joystick_fd, &read_fds);
+      max_fd = std::max(max_fd, int(m_joystick_fd));
     }
     if (net.listen_sock() != -1) {
       FD_SET(net.listen_sock(), &read_fds);
       max_fd = std::max(max_fd, net.listen_sock());
     }
-    if (select(max_fd + 1, &read_fds, nullptr, nullptr, nullptr) == -1)
-      return;
+    int n_fd_trig = select(max_fd + 1, &read_fds, nullptr, nullptr, &timeout);
+    if (n_fd_trig == -1) {
+      return_if_interrupted;
+      std::cerr << "error calling select(): " << std::strerror(errno)
+                << std::endl;
+      continue;
+    } else if (n_fd_trig == 0) {
+      /* timeout occurred - send updates to keep connections alive */
+      if (!net.send_updates(state))
+        return;
+      timeout.tv_sec = update_interval;
+      continue;
+    }
 
-    /* Poll for reconnected device */
+    bool js_update = false;
+
+    /* Handle udev monitor events */
     if (FD_ISSET(m_monitor_fd, &read_fds)) {
       while (udev_device_ptr dev = udev_monitor_receive_device(m_monitor)) {
         const char *sysname = udev_device_get_sysname(dev);
         if (!std::strcmp(sysname, m_sysname)) {
           const char *action = udev_device_get_action(dev);
           if (!std::strcmp(action, "add")) {
+            state.reset();
+            js_update = true;
             const char *devnode = udev_device_get_devnode(dev);
-            if (m_device_fd != -1) {
-              if (::close(m_device_fd) == -1 && errno == EINTR)
-                return;
-            }
-            m_device_fd = ::open(devnode, O_RDONLY | O_NONBLOCK);
-            if (m_device_fd == -1) {
-              if (errno == EINTR)
-                return;
+            if (m_joystick_fd.close())
+              return_if_interrupted;
+            m_joystick_fd = ::open(devnode, O_RDONLY | O_NONBLOCK);
+            if (m_joystick_fd == -1) {
+              return_if_interrupted;
               std::cerr << "error opening " << devnode
                         << " for reading: " << std::strerror(errno)
                         << std::endl;
@@ -99,31 +110,33 @@ void udev_if::event_loop(joystick_state &state, net_if &net) {
           }
         }
       }
-      if (errno == EINTR)
-        return;
+      return_if_interrupted;
     }
 
-    /* Process joystick event data */
-    bool js_update = false;
-    if (m_device_fd != -1 && FD_ISSET(m_device_fd, &read_fds)) {
+    /* Handle joystick events */
+    if (m_joystick_fd != -1 && FD_ISSET(m_joystick_fd, &read_fds)) {
       js_event event;
-      while (::read(m_device_fd, &event, sizeof(event)) == sizeof(event)) {
+      while (m_joystick_fd.read_event(event)) {
         state.receive_event(event);
         js_update = true;
       }
-      if (errno == EINTR)
+      return_if_interrupted;
+      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        state.reset();
+        js_update = true;
+        std::cout << "Lost Joystick" << std::endl;
+        m_joystick_fd.close();
+      }
+    }
+    if (js_update) {
+      if (!net.send_updates(state))
         return;
     }
 
-    if (js_update || FD_ISSET(net.listen_sock(), &read_fds)) {
-      if (!net.send_segments(state))
+    /* Handle new TCP connections */
+    if (FD_ISSET(net.listen_sock(), &read_fds)) {
+      if (!net.accept_connections(state))
         return;
     }
   }
-}
-
-udev_if::~udev_if() {
-  ::close(m_device_fd);
-  udev_monitor_unref(m_monitor);
-  udev_unref(m_udev);
 }

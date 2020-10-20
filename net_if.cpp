@@ -6,10 +6,9 @@
 #include <iostream>
 #include <netdb.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
 net_if::net_if(int port) {
-  int listen_sock = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+  fd listen_sock = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
   if (listen_sock == -1) {
     std::cerr << "error calling socket(): " << std::strerror(errno)
               << std::endl;
@@ -32,69 +31,65 @@ net_if::net_if(int port) {
       -1) {
     std::cerr << "error binding port " << port << ": " << std::strerror(errno)
               << std::endl;
-    ::close(listen_sock);
     return;
   }
 
   if (::listen(listen_sock, 128) == -1) {
     std::cerr << "error calling listen(): " << std::strerror(errno)
               << std::endl;
-    ::close(listen_sock);
     return;
   }
 
-  m_listen_sock = listen_sock;
+  m_listen_sock = std::move(listen_sock);
   std::cout << "Listening on port " << port << std::endl;
+
+  m_conns.reserve(16);
 }
 
-bool net_if::send_segments(const joystick_state &state) {
-  if (m_listen_sock == -1)
-    return false;
+#define return_if_interrupted                                                  \
+  if (errno == EINTR)                                                          \
+  return false
 
-  for (auto it = m_conns.begin(); it != m_conns.end();) {
-    if (::send(*it, &state, sizeof(state), MSG_NOSIGNAL) == -1) {
-      if (errno == EINTR)
-        return false;
-      std::cout << "Closed connection" << std::endl;
-      if (::close(*it) == -1 && errno == EINTR)
-        return false;
-      it = m_conns.erase(it);
-      continue;
-    }
-    ++it;
-  }
-
+bool net_if::accept_connections(const joystick_state &state) {
   struct sockaddr_in addr {};
   socklen_t addr_len = sizeof(addr);
 
-  int new_fd;
+  fd new_fd;
   while ((new_fd = ::accept(m_listen_sock, reinterpret_cast<sockaddr *>(&addr),
                             &addr_len)) != -1) {
     char hostname[256] = {};
     if (::getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(addr),
                       hostname, 256, nullptr, 0, 0)) {
-      if (errno == EINTR)
-        return false;
+      return_if_interrupted;
     }
-    std::cout << "Accepted connection from " << hostname << std::endl;
+    std::cout << "Accepted connection " << new_fd << " from " << hostname
+              << std::endl;
 
     if (::send(new_fd, &state, sizeof(state), MSG_NOSIGNAL) == -1) {
-      if (errno == EINTR)
-        return false;
-      std::cout << "Closed connection" << std::endl;
-      if (::close(new_fd) == -1 && errno == EINTR)
-        return false;
+      return_if_interrupted;
+      std::cout << "Closed connection " << new_fd << std::endl;
+      if (new_fd.close())
+        return_if_interrupted;
       continue;
     }
-    m_conns.push_back(new_fd);
+    m_conns.emplace_back(std::move(new_fd));
   }
+  return_if_interrupted;
 
-  return errno != EINTR;
+  return true;
 }
 
-net_if::~net_if() {
-  for (int conn : m_conns)
-    ::close(conn);
-  ::close(m_listen_sock);
-  std::cout << "Closed all connections" << std::endl;
+bool net_if::send_updates(const joystick_state &state) {
+  for (auto it = m_conns.begin(); it != m_conns.end();) {
+    if (::send(*it, &state, sizeof(state), MSG_NOSIGNAL) == -1) {
+      return_if_interrupted;
+      std::cout << "Closed connection " << *it << std::endl;
+      it = m_conns.erase(it);
+      return_if_interrupted;
+      continue;
+    }
+    ++it;
+  }
+
+  return true;
 }
