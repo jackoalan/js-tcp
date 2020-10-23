@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<ISO15745Profile xmlns="http://www.profibus.com/GSDML/2003/11/DeviceProfile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.profibus.com/GSDML/2003/11/DeviceProfile ..\xsd\GSDML-DeviceProfile-V2.35.xsd">
+    <!-- ProfileHeader definition as defined in ISO 15745-1. Please do not change the content. -->
+    <ProfileHeader>
+        <ProfileIdentification>PROFINET Device Profile</ProfileIdentification>
+        <ProfileRevision>1.00</ProfileRevision>
+        <ProfileName>Device Profile for PROFINET Devices</ProfileName>
+        <ProfileSource>PROFIBUS Nutzerorganisation e. V. (PNO)</ProfileSource>
+        <ProfileClassID>Device</ProfileClassID>
+        <ISO15745Reference>
+            <ISO15745Part>4</ISO15745Part>
+            <ISO15745Edition>1</ISO15745Edition>
+            <ProfileTechnology>GSDML</ProfileTechnology>
+        </ISO15745Reference>
+    </ProfileHeader>
+    <ProfileBody>
+        <DeviceIdentity VendorID="0xdead" DeviceID="0xca75">
+            <InfoText TextId="IDT_INFO_Device"/>
+            <VendorName Value="HCC"/>
+        </DeviceIdentity>
+        <DeviceFunction>
+            <Family MainFamily="I/O" ProductFamily="Tiberius Joystick"/>
+        </DeviceFunction>
+        <ApplicationProcess>
+            <DeviceAccessPointList>
+                <DeviceAccessPointItem ID="IDD_1" PNIO_Version="V2.35" PhysicalSlots="0..1" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="tiberius-joystick" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+                    <ModuleInfo>
+                        <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                        <InfoText TextId="IDT_INFO_DAP1"/>
+                        <VendorName Value="HCC"/>
+                        <OrderNumber Value="12345"/>
+                        <HardwareRelease Value="A1.0"/>
+                        <SoftwareRelease Value="Z1.0"/>
+                    </ModuleInfo>
+                    <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
+                    <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
+                    <UseableModules>
+                        <ModuleItemRef ModuleItemTarget="IDM_11" FixedInSlots="1"/>
+                    </UseableModules>
+                    <VirtualSubmoduleList>
+                        <VirtualSubmoduleItem ID="IDS_1" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
+                            <IOData/>
+                            <ModuleInfo>
+                                <Name TextId="IDT_MODULE_NAME_DAP1"/>
+                                <InfoText TextId="IDT_INFO_DAP1"/>
+                            </ModuleInfo>
+                        </VirtualSubmoduleItem>
+                    </VirtualSubmoduleList>
+                    <SystemDefinedSubmoduleList>
+                        <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_NAME_IS" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
+                            <ApplicationRelations StartupMode="Advanced">
+                                <TimingProperties SendClock="32" ReductionRatio="1 2 4 8 16 32 64 128 256 512"/>
+                            </ApplicationRelations>
+                        </InterfaceSubmoduleItem>
+                        <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_NAME_PS1" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                            <MAUTypeList>
+                                <MAUTypeItem Value="16"/>
+                            </MAUTypeList>
+                        </PortSubmoduleItem>
+                    </SystemDefinedSubmoduleList>
+                </DeviceAccessPointItem>
+            </DeviceAccessPointList>
+            <ModuleList>
+                <ModuleItem ID="IDM_11" ModuleIdentNumber="0x00000030">
+                    <ModuleInfo>
+                        <Name TextId="TOK_TextId_Module_Joystick"/>
+                        <InfoText TextId="TOK_InfoTextId_Module_Joystick"/>
+                        <HardwareRelease Value="1.0"/>
+                        <SoftwareRelease Value="1.0"/>
+                    </ModuleInfo>
+                    <VirtualSubmoduleList>
+                        <VirtualSubmoduleItem ID="11" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
+                            <IOData>
+                                <Input Consistency="All items consistency">
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_0"/>
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_1"/>
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_2"/>
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_3"/>
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_4"/>
+                                    <DataItem DataType="Unsigned16" TextId="TOK_Input_Axis_5"/>
+                                    <DataItem DataType="Unsigned8" TextId="TOK_Input_Buttons_0" UseAsBits="true">
+                                        <BitDataItem BitOffset="0" TextId="TOK_Input_Button_0"/>
+                                        <BitDataItem BitOffset="1" TextId="TOK_Input_Button_1"/>
+                                        <BitDataItem BitOffset="2" TextId="TOK_Input_Button_2"/>
+                                        <BitDataItem BitOffset="3" TextId="TOK_Input_Button_3"/>
+                                        <BitDataItem BitOffset="4" TextId="TOK_Input_Button_4"/>
+                                        <BitDataItem BitOffset="5" TextId="TOK_Input_Button_5"/>
+                                        <BitDataItem BitOffset="6" TextId="TOK_Input_Button_6"/>
+                                        <BitDataItem BitOffset="7" TextId="TOK_Input_Button_7"/>
+                                    </DataItem>
+                                    <DataItem DataType="Unsigned8" TextId="TOK_Input_Buttons_1" UseAsBits="true">
+                                        <BitDataItem BitOffset="0" TextId="TOK_Input_Button_8"/>
+                                        <BitDataItem BitOffset="1" TextId="TOK_Input_Button_9"/>
+                                        <BitDataItem BitOffset="2" TextId="TOK_Input_Button_10"/>
+                                        <BitDataItem BitOffset="3" TextId="TOK_Input_Button_11"/>
+                                        <BitDataItem BitOffset="4" TextId="TOK_Input_Button_12"/>
+                                        <BitDataItem BitOffset="5" TextId="TOK_Input_Button_13"/>
+                                        <BitDataItem BitOffset="6" TextId="TOK_Input_Button_14"/>
+                                        <BitDataItem BitOffset="7" TextId="TOK_Input_Button_15"/>
+                                    </DataItem>
+                                    <DataItem DataType="Unsigned8" TextId="TOK_Input_Buttons_2" UseAsBits="true">
+                                        <BitDataItem BitOffset="0" TextId="TOK_Input_Button_16"/>
+                                    </DataItem>
+                                    <DataItem DataType="Unsigned8" TextId="TOK_Input_Buttons_3" UseAsBits="true">
+                                    </DataItem>
+                                </Input>
+                            </IOData>
+                            <ModuleInfo>
+                                <Name TextId="TOK_TextId_Module_Joystick"/>
+                                <InfoText TextId="TOK_InfoTextId_Module_Joystick"/>
+                            </ModuleInfo>
+                        </VirtualSubmoduleItem>
+                    </VirtualSubmoduleList>
+                </ModuleItem>
+            </ModuleList>
+            <ExternalTextList>
+                <PrimaryLanguage>
+                    <Text TextId="IDT_INFO_Device" Value="Tiberius Joystick"/>
+                    <Text TextId="IDT_MODULE_NAME_DAP1" Value="Tiberius Joystick"/>
+                    <Text TextId="IDT_INFO_DAP1" Value="Tiberius Joystick"/>
+                    <Text TextId="IDT_NAME_IS" Value="I"/>
+                    <Text TextId="IDT_NAME_PS1" Value="P1"/>
+                    <!--module name-->
+                    <Text TextId="TOK_TextId_Module_Joystick" Value="Joystick"/>
+                    <!--module info name-->
+                    <Text TextId="TOK_InfoTextId_Module_Joystick" Value="Joystick"/>
+                    <!--dataitem name-->
+                    <Text TextId="TOK_Input_Axis_0" Value="Axis 0"/>
+                    <Text TextId="TOK_Input_Axis_1" Value="Axis 1"/>
+                    <Text TextId="TOK_Input_Axis_2" Value="Axis 2"/>
+                    <Text TextId="TOK_Input_Axis_3" Value="Axis 3"/>
+                    <Text TextId="TOK_Input_Axis_4" Value="Axis 4"/>
+                    <Text TextId="TOK_Input_Axis_5" Value="Axis 5"/>
+
+                    <Text TextId="TOK_Input_Buttons_0" Value="Buttons 0"/>
+                    <Text TextId="TOK_Input_Buttons_1" Value="Buttons 1"/>
+                    <Text TextId="TOK_Input_Buttons_2" Value="Buttons 2"/>
+                    <Text TextId="TOK_Input_Buttons_3" Value="Buttons 3"/>
+
+                    <Text TextId="TOK_Input_Button_0" Value="Button 0"/>
+                    <Text TextId="TOK_Input_Button_1" Value="Button 1"/>
+                    <Text TextId="TOK_Input_Button_2" Value="Button 2"/>
+                    <Text TextId="TOK_Input_Button_3" Value="Button 3"/>
+                    <Text TextId="TOK_Input_Button_4" Value="Button 4"/>
+                    <Text TextId="TOK_Input_Button_5" Value="Button 5"/>
+                    <Text TextId="TOK_Input_Button_6" Value="Button 6"/>
+                    <Text TextId="TOK_Input_Button_7" Value="Button 7"/>
+                    <Text TextId="TOK_Input_Button_8" Value="Button 8"/>
+                    <Text TextId="TOK_Input_Button_9" Value="Button 9"/>
+                    <Text TextId="TOK_Input_Button_10" Value="Button 10"/>
+                    <Text TextId="TOK_Input_Button_11" Value="Button 11"/>
+                    <Text TextId="TOK_Input_Button_12" Value="Button 12"/>
+                    <Text TextId="TOK_Input_Button_13" Value="Button 13"/>
+                    <Text TextId="TOK_Input_Button_14" Value="Button 14"/>
+                    <Text TextId="TOK_Input_Button_15" Value="Button 15"/>
+                    <Text TextId="TOK_Input_Button_16" Value="Button 16"/>
+                </PrimaryLanguage>
+            </ExternalTextList>
+        </ApplicationProcess>
+    </ProfileBody>
+</ISO15745Profile>

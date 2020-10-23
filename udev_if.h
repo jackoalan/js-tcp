@@ -5,6 +5,7 @@
 #include <libudev.h>
 
 class net_if;
+class pnet_if;
 
 #define DECLARE_UDEV_PTR(type)                                                 \
   extern "C" type *type##_unref(type *);                                       \
@@ -49,10 +50,16 @@ public:
 };
 
 class udev_if {
+  template <typename A>
+  bool handle_udev_monitor(A on_add);
+  template <typename E, typename L>
+  bool handle_joystick(E on_event, L on_lost);
+
 public:
   explicit udev_if(const char *sysname);
 
-  void event_loop(joystick_state &state, net_if &net);
+  int event_loop(joystick_state &state, net_if &net);
+  int event_loop(joystick_state &state, pnet_if &pnet, uint32_t periodic_us);
   bool valid() const { return m_monitor_fd != -1; }
 
 private:

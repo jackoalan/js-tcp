@@ -1,5 +1,6 @@
 #include "joystick_state.h"
 #include "net_if.h"
+#include "pnet_if.h"
 #include "udev_if.h"
 #include <csignal>
 #include <iostream>
@@ -12,12 +13,13 @@ void term_handler(int) {
 
 static int run() {
   udev_if udev("js0");
-  net_if net(9042);
-  if (!udev.valid() || !net.valid())
+  //net_if net(9042);
+  constexpr uint32_t tick_us = 1000;
+  pnet_if pnet("eth0", tick_us);
+  if (!udev.valid() || !pnet.valid())
     return 1;
   joystick_state state;
-  udev.event_loop(state, net);
-  return 0;
+  return udev.event_loop(state, pnet, tick_us);
 }
 
 int main(int argc, char **argv) {
