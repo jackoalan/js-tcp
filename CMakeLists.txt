@@ -15,3 +15,5 @@ target_include_directories(js-tcp PUBLIC "${PROFINET_SOURCE_DIR}/src/osal/linux"
 
 install(TARGETS js-tcp RUNTIME DESTINATION bin)
 install(FILES js-tcp.service DESTINATION lib/systemd/system)
+install(FILES "${PROFINET_SOURCE_DIR}/src/osal/linux/set_network_parameters" DESTINATION /
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

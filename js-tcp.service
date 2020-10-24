@@ -1,6 +1,6 @@
 [Unit]
 Description=Joystick TCP Bridge
-After=network.target systemd-udev-settle.service
+After=systemd-udev-settle.service
 
 [Service]
 ExecStart=js-tcp
