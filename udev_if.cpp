@@ -1,11 +1,11 @@
 #include "udev_if.h"
 #include "joystick_state.h"
-#include "net_if.h"
 #include "pnet_if.h"
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
+#include "timespec_util.h"
 
 extern bool volatile g_terminate;
 
@@ -94,120 +94,8 @@ bool udev_if::handle_joystick(E on_event, L on_lost) {
   if (errno == EINTR)                                                          \
   return 0
 
-int udev_if::event_loop(joystick_state &state, net_if &net) {
-  /* 10s interval */
-  constexpr uint32_t update_interval = 10;
-  timeval timeout{update_interval, 0};
-  while (!g_terminate) {
-    /*
-     * Wait on one of three event sources:
-     * - udev monitor for controller reconnections
-     * - device file for controller events
-     * - TCP listen socket for new incoming connections
-     */
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(m_monitor_fd, &read_fds);
-    int max_fd = m_monitor_fd;
-    if (m_joystick_fd != -1) {
-      FD_SET(m_joystick_fd, &read_fds);
-      max_fd = std::max(max_fd, int(m_joystick_fd));
-    }
-    if (net.listen_sock() != -1) {
-      FD_SET(net.listen_sock(), &read_fds);
-      max_fd = std::max(max_fd, net.listen_sock());
-    }
-    int n_fd_trig = select(max_fd + 1, &read_fds, nullptr, nullptr, &timeout);
-    if (n_fd_trig == -1) {
-      return_if_interrupted;
-      std::cerr << "error calling select(): " << std::strerror(errno)
-                << std::endl;
-      continue;
-    } else if (n_fd_trig == 0) {
-      /* timeout occurred - send updates to keep connections alive */
-      if (!net.send_updates(state))
-        return 0;
-      timeout.tv_sec = update_interval;
-      continue;
-    }
-
-    bool js_update = false;
-
-    /* Handle udev monitor events */
-    if (FD_ISSET(m_monitor_fd, &read_fds)) {
-      if (!handle_udev_monitor([&]() {
-            state.reset();
-            js_update = true;
-          }))
-        return 0;
-    }
-
-    /* Handle joystick events */
-    if (m_joystick_fd != -1 && FD_ISSET(m_joystick_fd, &read_fds)) {
-      if (!handle_joystick(
-              [&](const js_event &event) {
-                state.receive_event(event);
-                js_update = true;
-              },
-              [&]() {
-                state.reset();
-                js_update = true;
-              }))
-        return 0;
-    }
-
-    if (js_update) {
-      if (!net.send_updates(state))
-        return 0;
-    }
-
-    /* Handle new TCP connections */
-    if (FD_ISSET(net.listen_sock(), &read_fds)) {
-      if (!net.accept_connections(state))
-        return 0;
-    }
-  }
-
-  return 0;
-}
-
-static void timespec_add(timespec &result, const timespec &x,
-                         const timespec &y) {
-  result.tv_sec = x.tv_sec + y.tv_sec;
-  result.tv_nsec = x.tv_nsec + y.tv_nsec;
-
-  if (result.tv_nsec >= 1000000000) {
-    result.tv_sec += result.tv_nsec / 1000000000;
-    result.tv_nsec = result.tv_nsec % 1000000000;
-  }
-}
-
-static bool timespec_subtract(timespec &result, const timespec &x,
-                              timespec &y) {
-  /* Perform the carry for the later subtraction by updating y. */
-  using nsec_t = decltype(timespec::tv_nsec);
-  if (x.tv_nsec < y.tv_nsec) {
-    nsec_t nsec = (y.tv_nsec - x.tv_nsec) / 1000000000 + 1;
-    y.tv_nsec -= 1000000000 * nsec;
-    y.tv_sec += nsec;
-  }
-  if (x.tv_nsec - y.tv_nsec > 1000000000) {
-    nsec_t nsec = (x.tv_nsec - y.tv_nsec) / 1000000000;
-    y.tv_nsec += 1000000000 * nsec;
-    y.tv_sec -= nsec;
-  }
-
-  /* Compute the time remaining to wait.
-     tv_usec is certainly positive. */
-  result.tv_sec = x.tv_sec - y.tv_sec;
-  result.tv_nsec = x.tv_nsec - y.tv_nsec;
-
-  /* Return true if result is negative. */
-  return x.tv_sec < y.tv_sec;
-}
-
 int udev_if::event_loop(joystick_state &state, pnet_if &pnet,
-                         uint32_t periodic_us) {
+                        uint32_t periodic_us) {
   /* Attempt to use real-time scheduling */
   static_assert(_POSIX_THREAD_PRIORITY_SCHEDULING > 0,
                 "SCHED_FIFO not available");

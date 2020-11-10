@@ -3,6 +3,7 @@
 //
 
 #include "pnet_if.h"
+#include "can_if.h"
 #include "joystick_state.h"
 #include "osal.h"
 #include <cstring>
@@ -10,6 +11,35 @@
 #include <libnet.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+constexpr struct station_info {
+  const char *device_string = "Tiberius";
+#ifdef TIBERIUS_JS
+  const char *station_name = "joystick.pilot";
+  os_ipaddr_t default_ip = 0x0A0A001E;
+  const char *tmp_dir = "/pnet-js";
+  const char *serial_number = "00001";
+  uint32_t dap_mod_ident = 1;
+  uint32_t dev_module_ident = 0x00000030;
+  uint32_t dev_submodule_ident = 0x00000001;
+  uint16_t dev_max_slot = 1;
+  pnet_submodule_dir_t dev_dir = PNET_DIR_INPUT;
+  uint16_t dev_length_input = sizeof(joystick_state);
+  uint16_t dev_length_output = 0;
+#elif defined(TIBERIUS_CAN)
+  const char *station_name = "can.robot";
+  os_ipaddr_t default_ip = 0x0A14001E;
+  const char *tmp_dir = "/pnet-can";
+  const char *serial_number = "00002";
+  uint32_t dap_mod_ident = 2;
+  uint32_t dev_module_ident = 0x00000031;
+  uint32_t dev_submodule_ident = 0x00000001;
+  uint16_t dev_max_slot = 4;
+  pnet_submodule_dir_t dev_dir = PNET_DIR_IO;
+  uint16_t dev_length_input = sizeof(can_input_state);
+  uint16_t dev_length_output = sizeof(can_output_state);
+#endif
+} g_station_info;
 
 struct pnet_callbacks {
   static int state(pnet_t *, void *arg, uint32_t arep,
@@ -221,9 +251,9 @@ pnet_if::cfg::cfg(pnet_if *pnet, const char *netif) {
   oem_device_id.vendor_id_lo = 0xff;
   oem_device_id.device_id_hi = 0xee;
   oem_device_id.device_id_lo = 0x01;
-  std::strcpy(device_vendor, "Tiberius Joystick");
-  std::strcpy(manufacturer_specific_string, "Tiberius Joystick");
-  std::strcpy(station_name, "tiberius-joystick");
+  std::strcpy(device_vendor, g_station_info.device_string);
+  std::strcpy(manufacturer_specific_string, g_station_info.device_string);
+  std::strcpy(station_name, g_station_info.station_name);
 
   /* Timing */
   min_device_interval = 32; /* Corresponds to 1 ms */
@@ -249,13 +279,13 @@ pnet_if::cfg::cfg(pnet_if *pnet, const char *netif) {
     exit(EXIT_FAILURE);
   }
 
-  //os_ipaddr_t ip = get_ip_address(netif);
-  //os_ipaddr_t netmask = get_netmask(netif);
-  //os_ipaddr_t gatewaya = get_gateway(netif);
-  os_ipaddr_t ip = 0xC0A80032;
-  os_ipaddr_t netmask = 0xFFFFFF00;
-  os_ipaddr_t gateway = 0xC0A80001;
-  //if (gateway == 0) {
+  // os_ipaddr_t ip = get_ip_address(netif);
+  // os_ipaddr_t netmask = get_netmask(netif);
+  // os_ipaddr_t gateway = get_gateway(netif);
+  os_ipaddr_t ip = g_station_info.default_ip;
+  os_ipaddr_t netmask = 0xFF000000;
+  os_ipaddr_t gateway = 0;
+  // if (gateway == 0) {
   //  printf("Error: Invalid gateway IP address for Ethernet interface: %s\n",
   //         netif);
   //  exit(EXIT_FAILURE);
@@ -271,25 +301,22 @@ pnet_if::cfg::cfg(pnet_if *pnet, const char *netif) {
 
   /* Prepare stack config with IP address, gateway, station name etc */
   strcpy(im_0_data.im_order_id, "12345");
-  strcpy(im_0_data.im_serial_number, "00001");
+  strcpy(im_0_data.im_serial_number, g_station_info.serial_number);
   copy_ip_to_struct(ip_addr, ip);
   copy_ip_to_struct(ip_gateway, gateway);
   copy_ip_to_struct(ip_mask, netmask);
-  const char *tmpdir = getenv("TEMP");
+  const char *tmpdir = getenv("TMPDIR");
   if (!tmpdir)
     tmpdir = "/tmp";
   strncpy(file_directory, tmpdir, 128);
-  strncat(file_directory, "/js-tcp", 128);
+  strncat(file_directory, g_station_info.tmp_dir, 128);
   mkdir(file_directory, 755);
   std::cout << "Storage directory: " << file_directory << std::endl;
   memcpy(eth_addr.addr, macbuffer.addr, sizeof(os_ethaddr_t));
 }
 
-constexpr uint32_t joystick_module_ident = 0x00000030;
-constexpr uint32_t joystick_submodule_ident = 0x00000001;
-
 int pnet_if::state(uint32_t arep, pnet_event_values_t state) {
-  std::cout << "state" << std::endl;
+  std::cout << "state " << state << std::endl;
 
   if (state == PNET_EVENT_ABORT) {
     uint16_t err_cls = 0;
@@ -298,7 +325,7 @@ int pnet_if::state(uint32_t arep, pnet_event_values_t state) {
       /* A few of the most common error codes */
       switch (err_cls) {
       default:
-        std::cerr << "Unknown error class" << std::endl;
+        std::cerr << "Unknown error class " << err_cls << std::endl;
         break;
       case PNET_ERROR_CODE_1_RTA_ERR_CLS_PROTOCOL:
         switch (err_code) {
@@ -312,6 +339,7 @@ int pnet_if::state(uint32_t arep, pnet_event_values_t state) {
           std::cerr << "Controller sent release request." << std::endl;
           break;
         default:
+          std::cerr << "Unknown error code " << err_code << std::endl;
           break;
         }
         break;
@@ -320,7 +348,7 @@ int pnet_if::state(uint32_t arep, pnet_event_values_t state) {
       std::cerr << "No error status available" << std::endl;
     }
     /* Only abort AR with correct session key */
-    //m_error = true;
+    // m_error = true;
     m_main_arep = UINT32_MAX;
   } else if (state == PNET_EVENT_PRMEND) {
     /* Save the arep for later use */
@@ -340,9 +368,22 @@ int pnet_if::state(uint32_t arep, pnet_event_values_t state) {
 
     /* Set initial data and IOPS for custom input modules, and IOCS for custom
      * output modules */
-    joystick_state default_state;
-    pnet_input_set_data_and_iops(m_pnet, 0, 1, 1, (uint8_t *)&default_state,
-                                 sizeof(default_state), PNET_IOXS_GOOD);
+#ifdef TIBERIUS_JS
+    joystick_state default_state{};
+#elif defined(TIBERIUS_CAN)
+    can_input_state default_state{};
+#endif
+
+    for (uint16_t slot = 1; slot <= g_station_info.dev_max_slot; ++slot) {
+      if ((m_slot_bitmask & (1u << slot)) != 0) {
+        pnet_input_set_data_and_iops(m_pnet, 0, slot, 1,
+                                     (uint8_t *)&default_state,
+                                     sizeof(default_state), PNET_IOXS_GOOD);
+#ifdef TIBERIUS_CAN
+        pnet_output_set_iocs(m_pnet, 0, slot, 1, PNET_IOXS_GOOD);
+#endif
+      }
+    }
 
     pnet_set_provider_state(m_pnet, true);
   }
@@ -391,11 +432,11 @@ int pnet_if::write(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot,
 int pnet_if::exp_module(uint32_t api, uint16_t slot, uint32_t module_ident) {
   std::cout << "exp_module" << std::endl;
 
-  if (module_ident == PNET_MOD_DAP_IDENT) {
-    return plug_module(slot, PNET_MOD_DAP_IDENT);
+  if (module_ident == g_station_info.dap_mod_ident) {
+    return plug_module(slot, g_station_info.dap_mod_ident);
   }
 
-  if (module_ident != joystick_module_ident) {
+  if (module_ident != g_station_info.dev_module_ident) {
     std::cerr << "unsupported module " << module_ident << std::endl;
     return -1;
   }
@@ -417,38 +458,38 @@ int pnet_if::exp_submodule(uint32_t api, uint16_t slot, uint16_t subslot,
                            uint32_t module_ident, uint32_t submodule_ident) {
   std::cout << "exp_submodule" << std::endl;
 
-  if (module_ident == PNET_MOD_DAP_IDENT) {
+  if (module_ident == g_station_info.dap_mod_ident) {
     switch (submodule_ident) {
     case PNET_SUBMOD_DAP_IDENT:
       return plug_submodule(PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
-                            PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
+                            g_station_info.dap_mod_ident, PNET_SUBMOD_DAP_IDENT,
                             PNET_DIR_NO_IO, 0, 0);
     case PNET_SUBMOD_DAP_INTERFACE_1_IDENT:
       return plug_submodule(
           PNET_SLOT_DAP_IDENT, PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
-          PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT, PNET_DIR_NO_IO,
-          0, 0);
+          g_station_info.dap_mod_ident, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
+          PNET_DIR_NO_IO, 0, 0);
     case PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT:
       return plug_submodule(
           PNET_SLOT_DAP_IDENT, PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
-          PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-          PNET_DIR_NO_IO, 0, 0);
+          g_station_info.dap_mod_ident,
+          PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, PNET_DIR_NO_IO, 0, 0);
     default:
       return -1;
     }
   }
 
-  if (module_ident != joystick_module_ident) {
+  if (module_ident != g_station_info.dev_module_ident) {
     std::cerr << "unsupported module " << module_ident << std::endl;
     return -1;
   }
 
-  if (submodule_ident != joystick_submodule_ident) {
+  if (submodule_ident != g_station_info.dev_submodule_ident) {
     std::cerr << "unsupported submodule " << submodule_ident << std::endl;
     return -1;
   }
 
-  if (slot != 1) {
+  if (slot > g_station_info.dev_max_slot) {
     std::cerr << "unsupported slot " << slot << std::endl;
     return -1;
   }
@@ -458,10 +499,12 @@ int pnet_if::exp_submodule(uint32_t api, uint16_t slot, uint16_t subslot,
     return -1;
   }
 
-  int ret = plug_submodule(slot, subslot, module_ident, submodule_ident,
-                           PNET_DIR_INPUT, sizeof(joystick_state), 0);
+  int ret = plug_submodule(
+      slot, subslot, module_ident, submodule_ident, g_station_info.dev_dir,
+      g_station_info.dev_length_input, g_station_info.dev_length_output);
   if (ret == 0) {
     std::cout << "plugged module slot " << slot << std::endl;
+    m_slot_bitmask |= 1u << slot;
   }
 
   return ret;
@@ -517,30 +560,65 @@ int pnet_if::plug_submodule(uint16_t slot, uint16_t subslot,
 }
 
 void pnet_if::plug_dap() {
-  plug_module(PNET_SLOT_DAP_IDENT, PNET_MOD_DAP_IDENT);
-  plug_submodule(PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT, PNET_MOD_DAP_IDENT,
-                 PNET_SUBMOD_DAP_IDENT, PNET_DIR_NO_IO, 0, 0);
+  plug_module(PNET_SLOT_DAP_IDENT, g_station_info.dap_mod_ident);
+  plug_submodule(PNET_SLOT_DAP_IDENT, PNET_SUBMOD_DAP_IDENT,
+                 g_station_info.dap_mod_ident, PNET_SUBMOD_DAP_IDENT,
+                 PNET_DIR_NO_IO, 0, 0);
   plug_submodule(PNET_SLOT_DAP_IDENT, PNET_SUBSLOT_DAP_INTERFACE_1_IDENT,
-                 PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
-                 PNET_DIR_NO_IO, 0, 0);
+                 g_station_info.dap_mod_ident,
+                 PNET_SUBMOD_DAP_INTERFACE_1_IDENT, PNET_DIR_NO_IO, 0, 0);
   plug_submodule(PNET_SLOT_DAP_IDENT, PNET_SUBSLOT_DAP_INTERFACE_1_PORT_0_IDENT,
-                 PNET_MOD_DAP_IDENT, PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT,
-                 PNET_DIR_NO_IO, 0, 0);
+                 g_station_info.dap_mod_ident,
+                 PNET_SUBMOD_DAP_INTERFACE_1_PORT_0_IDENT, PNET_DIR_NO_IO, 0,
+                 0);
 }
 
-bool pnet_if::periodic() {
+bool pnet_if::periodic(
+#ifdef TIBERIUS_CAN
+    can_if &can
+#endif
+) {
   pnet_handle_periodic(m_pnet);
   if (m_needs_app_ready) {
     m_needs_app_ready = false;
     pnet_application_ready(m_pnet, m_main_arep);
   }
+
+#ifdef TIBERIUS_CAN
+  for (uint16_t slot = 0; slot < g_station_info.dev_max_slot; ++slot) {
+    if ((m_slot_bitmask & (1u << slot)) != 0) {
+      bool is_updated = false;
+      can_output_state state{};
+      uint16_t output_length = sizeof(state);
+      uint8_t output_iops;
+      if (pnet_output_get_data_and_iops(m_pnet, 0, slot, 1,
+                                        &is_updated, (uint8_t*)&state,
+                                        &output_length, &output_iops) == 0 &&
+          output_length >= sizeof(state)) {
+        can.find_or_create_talon(slot).set_can_output_state(state);
+      }
+    }
+  }
+#endif
+
   return m_error;
 }
 
+#ifdef TIBERIUS_JS
 void pnet_if::send_updates(const joystick_state &state) {
   pnet_input_set_data_and_iops(m_pnet, 0, 1, 1, (uint8_t *)&state,
                                sizeof(state), PNET_IOXS_GOOD);
 }
+#endif
+
+#ifdef TIBERIUS_CAN
+void pnet_if::send_updates(const talon_srx &talon) {
+  assert(talon.m_dev_id <= g_station_info.dev_max_slot);
+  can_input_state state = talon.get_can_input_state();
+  pnet_input_set_data_and_iops(m_pnet, 0, talon.m_dev_id, 1, (uint8_t *)&state,
+                               sizeof(state), PNET_IOXS_GOOD);
+}
+#endif
 
 pnet_if::pnet_if(const char *netif, uint32_t tick_us) : m_cfg(this, netif) {
   m_pnet = pnet_init(netif, tick_us, &m_cfg);

@@ -1,9 +1,9 @@
 [Unit]
-Description=Joystick TCP Bridge
+Description=Profinet CAN Bridge
 After=systemd-udev-settle.service
 
 [Service]
-ExecStart=js-tcp
+ExecStart=pnet-can
 Restart=always
 
 [Install]

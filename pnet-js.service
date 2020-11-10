@@ -1,0 +1,10 @@
+[Unit]
+Description=Profinet Joystick Bridge
+After=systemd-udev-settle.service
+
+[Service]
+ExecStart=pnet-js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

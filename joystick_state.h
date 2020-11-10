@@ -21,9 +21,10 @@ struct joystick_state {
         else
           m_button &= ~(1u << event.number);
       }
+      break;
     case JS_EVENT_AXIS:
       if (event.number < num_axis)
-        m_axis[event.number] = event.value;
+        m_axis[event.number] = __builtin_bswap16(event.value);
       break;
     }
   }

@@ -5,6 +5,8 @@
 
 class pnet_if;
 struct joystick_state;
+struct talon_srx;
+class can_if;
 
 class pnet_if {
   pnet_t *m_pnet = nullptr;
@@ -12,6 +14,7 @@ class pnet_if {
     explicit cfg(pnet_if *pnet, const char *netif);
   } m_cfg;
 
+  uint32_t m_slot_bitmask = 0;
   uint32_t m_main_arep = UINT32_MAX;
   bool m_error = false;
   bool m_needs_app_ready = false;
@@ -72,6 +75,15 @@ public:
   explicit pnet_if(const char *netif, uint32_t tick_us);
   bool valid() const { return m_pnet != nullptr; }
 
-  bool periodic();
+  bool periodic(
+#ifdef TIBERIUS_CAN
+      can_if &can
+#endif
+      );
+#ifdef TIBERIUS_JS
   void send_updates(const joystick_state &state);
+#endif
+#ifdef TIBERIUS_CAN
+  void send_updates(const talon_srx &talon);
+#endif
 };

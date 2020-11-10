@@ -1,0 +1,22 @@
+#ifndef CAN_FRAME_DEF
+#define CAN_FRAME_DEF(struc)
+#endif
+
+#ifndef CAN_FRAME_RECV
+#define CAN_FRAME_RECV(struc) CAN_FRAME_DEF(struc)
+#endif
+
+#ifndef CAN_FRAME_SEND
+#define CAN_FRAME_SEND(struc, cycle_div) CAN_FRAME_DEF(struc)
+#endif
+
+CAN_FRAME_RECV(status1)
+CAN_FRAME_RECV(status2)
+CAN_FRAME_RECV(status3)
+CAN_FRAME_RECV(status4)
+CAN_FRAME_SEND(ctrl1, 1)
+CAN_FRAME_SEND(ctrl5, 5)
+
+#undef CAN_FRAME_DEF
+#undef CAN_FRAME_RECV
+#undef CAN_FRAME_SEND

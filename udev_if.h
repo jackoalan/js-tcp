@@ -4,7 +4,6 @@
 #include "joystick_state.h"
 #include <libudev.h>
 
-class net_if;
 class pnet_if;
 
 #define DECLARE_UDEV_PTR(type)                                                 \
@@ -58,7 +57,6 @@ class udev_if {
 public:
   explicit udev_if(const char *sysname);
 
-  int event_loop(joystick_state &state, net_if &net);
   int event_loop(joystick_state &state, pnet_if &pnet, uint32_t periodic_us);
   bool valid() const { return m_monitor_fd != -1; }
 
