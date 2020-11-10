@@ -4,7 +4,6 @@ BindsTo=sys-subsystem-net-devices-can0.device
 After=sys-subsystem-net-devices-can0.device systemd-udev-settle.service
 
 [Service]
-ExecStartPre=/sbin/ip link set can0 up type can bitrate 1000000
 ExecStart=pnet-can
 Restart=always
 
