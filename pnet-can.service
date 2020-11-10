@@ -1,7 +1,7 @@
 [Unit]
 Description=Profinet CAN Bridge
-BindsTo=sys-subsystem-net-devices-can0.device
-After=sys-subsystem-net-devices-can0.device systemd-udev-settle.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 ExecStart=pnet-can

@@ -1,5 +1,6 @@
 [Unit]
 Description=Profinet Joystick Bridge
+Wants=systemd-udev-settle.service
 After=systemd-udev-settle.service
 
 [Service]
