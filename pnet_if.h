@@ -40,12 +40,13 @@ class pnet_if {
 
   int write(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot,
             uint16_t idx, uint16_t sequence_number, uint16_t write_length,
-            uint8_t *p_write_data, pnet_result_t *p_result);
+            const uint8_t *p_write_data, pnet_result_t *p_result);
 
   int exp_module(uint32_t api, uint16_t slot, uint32_t module_ident);
 
   int exp_submodule(uint32_t api, uint16_t slot, uint16_t subslot,
-                    uint32_t module_ident, uint32_t submodule_ident);
+                    uint32_t module_ident, uint32_t submodule_ident,
+                    const pnet_data_cfg *cfg);
 
   int new_data_status(
       uint32_t arep, uint32_t crep,
@@ -53,9 +54,9 @@ class pnet_if {
       uint8_t data_status);
 
   int alarm_ind(uint32_t arep, const pnet_alarm_argument_t *p_alarm_argument,
-                uint16_t data_len, uint16_t data_usi, uint8_t *p_data);
+                uint16_t data_len, uint16_t data_usi, const uint8_t *p_data);
 
-  int alarm_cnf(uint32_t arep, pnet_pnio_status_t *p_pnio_status);
+  int alarm_cnf(uint32_t arep, const pnet_pnio_status_t *p_pnio_status);
 
   int alarm_ack_cnf(uint32_t arep, int res);
 
@@ -79,7 +80,7 @@ public:
 #ifdef TIBERIUS_CAN
       can_if &can
 #endif
-      );
+  );
 #ifdef TIBERIUS_JS
   void send_updates(const joystick_state &state);
 #endif

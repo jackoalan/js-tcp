@@ -6,6 +6,7 @@
 #include "can_if.h"
 #include "joystick_state.h"
 #include "osal.h"
+#include "pnal.h"
 #include <cstring>
 #include <iostream>
 #include <libnet.h>
@@ -83,7 +84,7 @@ struct pnet_callbacks {
   static int write(pnet_t *, void *arg, uint32_t arep, uint32_t api,
                    uint16_t slot, uint16_t subslot, uint16_t idx,
                    uint16_t sequence_number, uint16_t write_length,
-                   uint8_t *p_write_data, pnet_result_t *p_result) {
+                   const uint8_t *p_write_data, pnet_result_t *p_result) {
     return reinterpret_cast<pnet_if *>(arg)->write(
         arep, api, slot, subslot, idx, sequence_number, write_length,
         p_write_data, p_result);
@@ -97,9 +98,9 @@ struct pnet_callbacks {
 
   static int exp_submodule(pnet_t *, void *arg, uint32_t api, uint16_t slot,
                            uint16_t subslot, uint32_t module_ident,
-                           uint32_t submodule_ident) {
+                           uint32_t submodule_ident, const pnet_data_cfg *cfg) {
     return reinterpret_cast<pnet_if *>(arg)->exp_submodule(
-        api, slot, subslot, module_ident, submodule_ident);
+        api, slot, subslot, module_ident, submodule_ident, cfg);
   }
 
   static int new_data_status(
@@ -112,13 +113,14 @@ struct pnet_callbacks {
 
   static int alarm_ind(pnet_t *, void *arg, uint32_t arep,
                        const pnet_alarm_argument_t *p_alarm_argument,
-                       uint16_t data_len, uint16_t data_usi, uint8_t *p_data) {
+                       uint16_t data_len, uint16_t data_usi,
+                       const uint8_t *p_data) {
     return reinterpret_cast<pnet_if *>(arg)->alarm_ind(
         arep, p_alarm_argument, data_len, data_usi, p_data);
   }
 
   static int alarm_cnf(pnet_t *, void *arg, uint32_t arep,
-                       pnet_pnio_status_t *p_pnio_status) {
+                       const pnet_pnio_status_t *p_pnio_status) {
     return reinterpret_cast<pnet_if *>(arg)->alarm_cnf(arep, p_pnio_status);
   }
 
@@ -423,7 +425,7 @@ int pnet_if::read(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot,
 
 int pnet_if::write(uint32_t arep, uint32_t api, uint16_t slot, uint16_t subslot,
                    uint16_t idx, uint16_t sequence_number,
-                   uint16_t write_length, uint8_t *p_write_data,
+                   uint16_t write_length, const uint8_t *p_write_data,
                    pnet_result_t *p_result) {
   std::cout << "write" << std::endl;
   return 0;
@@ -455,7 +457,8 @@ int pnet_if::exp_module(uint32_t api, uint16_t slot, uint32_t module_ident) {
 }
 
 int pnet_if::exp_submodule(uint32_t api, uint16_t slot, uint16_t subslot,
-                           uint32_t module_ident, uint32_t submodule_ident) {
+                           uint32_t module_ident, uint32_t submodule_ident,
+                           const pnet_data_cfg *cfg) {
   std::cout << "exp_submodule" << std::endl;
 
   if (module_ident == g_station_info.dap_mod_ident) {
@@ -520,12 +523,13 @@ int pnet_if::new_data_status(
 
 int pnet_if::alarm_ind(uint32_t arep,
                        const pnet_alarm_argument_t *p_alarm_argument,
-                       uint16_t data_len, uint16_t data_usi, uint8_t *p_data) {
+                       uint16_t data_len, uint16_t data_usi,
+                       const uint8_t *p_data) {
   std::cout << "alarm_ind" << std::endl;
   return 0;
 }
 
-int pnet_if::alarm_cnf(uint32_t arep, pnet_pnio_status_t *p_pnio_status) {
+int pnet_if::alarm_cnf(uint32_t arep, const pnet_pnio_status_t *p_pnio_status) {
   std::cout << "alarm_cnf" << std::endl;
   return 0;
 }
@@ -591,9 +595,9 @@ bool pnet_if::periodic(
       can_output_state state{};
       uint16_t output_length = sizeof(state);
       uint8_t output_iops;
-      if (pnet_output_get_data_and_iops(m_pnet, 0, slot, 1,
-                                        &is_updated, (uint8_t*)&state,
-                                        &output_length, &output_iops) == 0 &&
+      if (pnet_output_get_data_and_iops(m_pnet, 0, slot, 1, &is_updated,
+                                        (uint8_t *)&state, &output_length,
+                                        &output_iops) == 0 &&
           output_length >= sizeof(state)) {
         can.find_or_create_talon(slot).set_can_output_state(state);
       }
