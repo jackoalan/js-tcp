@@ -13,7 +13,7 @@ void term_handler(int) {
 static int run() {
   can_if can("can0");
   constexpr uint32_t tick_us = 1000;
-  pnet_if pnet("enp114s0", tick_us);
+  pnet_if pnet("eth0", tick_us);
   if (!can.valid() || !pnet.valid())
     return 1;
   return can.event_loop(pnet, tick_us);

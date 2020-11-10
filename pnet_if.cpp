@@ -546,6 +546,26 @@ int pnet_if::reset(bool should_reset_application, uint16_t reset_mode) {
 
 int pnet_if::signal_led(bool led_state) {
   std::cout << "signal_led" << std::endl;
+#ifdef TIBERIUS_CAN
+  char *outputcommand;
+  int textlen = -1;
+  int status = -1;
+
+  textlen = asprintf (
+     &outputcommand,
+     "./set_profinet_leds_linux 0 %u",
+     led_state);
+  if (textlen < 0) {
+    return -1;
+  }
+
+  status = system(outputcommand);
+  free(outputcommand);
+  if (status != 0) {
+    std::cout << "failed to set LED state" << std::endl;
+    return -1;
+  }
+#endif
   return 0;
 }
 

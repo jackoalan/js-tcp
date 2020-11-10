@@ -24,5 +24,6 @@ target_compile_definitions(pnet-can PUBLIC TIBERIUS_CAN)
 
 install(TARGETS pnet-js pnet-can RUNTIME DESTINATION bin)
 install(FILES pnet-js.service pnet-can.service DESTINATION lib/systemd/system)
-install(FILES "${PROFINET_SOURCE_DIR}/src/ports/linux/set_network_parameters" DESTINATION /
+install(FILES "${PROFINET_SOURCE_DIR}/src/ports/linux/set_network_parameters"
+        "set_profinet_leds_linux" DESTINATION /
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
