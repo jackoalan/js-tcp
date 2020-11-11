@@ -69,8 +69,8 @@ bool can_if::write_message(const can_frame &frame) const {
   int nbytes;
   if ((nbytes = ::write(m_can_sock, &frame, sizeof(frame))) == -1) {
     return_if_interrupted;
-    std::cerr << "bad can write" << std::endl;
-    return false;
+    std::cerr << "bad can write " << strerror(errno) << std::endl;
+    return true;
   }
 
   if (nbytes < sizeof(frame)) {

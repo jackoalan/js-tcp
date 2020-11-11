@@ -443,7 +443,7 @@ int pnet_if::exp_module(uint32_t api, uint16_t slot, uint32_t module_ident) {
     return -1;
   }
 
-  if (slot != 1) {
+  if (slot > g_station_info.dev_max_slot) {
     std::cerr << "unsupported slot " << slot << std::endl;
     return -1;
   }
