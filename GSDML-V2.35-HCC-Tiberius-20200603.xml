@@ -156,7 +156,7 @@
                         <SoftwareRelease Value="1.0"/>
                     </ModuleInfo>
                     <VirtualSubmoduleList>
-                        <VirtualSubmoduleItem ID="11" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
+                        <VirtualSubmoduleItem ID="12" SubmoduleIdentNumber="0x0001" API="0" MayIssueProcessAlarm="false">
                             <IOData>
                                 <Input Consistency="All items consistency">
                                     <DataItem DataType="Integer32" TextId="TOK_Input_Potentiometer"/>
