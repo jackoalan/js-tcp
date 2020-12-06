@@ -28,16 +28,16 @@ template <class payload_t> struct can_frame_t : can_frame {
 
 struct status1 {
   // 0x02041400, faults
-  static constexpr canid_t id = 0x02041400;
+  static constexpr canid_t id = 0x02041400 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 8;
-  __u64 data;
+  __u64 data = 0;
 };
 
 struct status2 {
   // 0x02041440, feedback
-  static constexpr canid_t id = 0x02041440;
+  static constexpr canid_t id = 0x02041440 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 8;
-  __u64 data;
+  __u64 data = 0;
 
   int32_t get_sensor_position() const {
     unsigned ret = ((data & 0xffull) << 16ull) | (data & 0xff00ull) |
@@ -54,16 +54,16 @@ struct status2 {
 
 struct status3 {
   // 0x02041480, logical feedback
-  static constexpr canid_t id = 0x02041480;
+  static constexpr canid_t id = 0x02041480 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 8;
-  __u64 data;
+  __u64 data = 0;
 };
 
 struct status4 {
   // 0x020414C0, analog
-  static constexpr canid_t id = 0x020414C0;
+  static constexpr canid_t id = 0x020414C0 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 8;
-  __u64 data;
+  __u64 data = 0;
 
   uint8_t get_batt_v() const { return (data >> 48ull) & 0xffull; }
 
@@ -72,7 +72,7 @@ struct status4 {
 
 struct ctrl1 {
   // 0x02040000, enable, 10ms period
-  static constexpr canid_t id = 0x02040000;
+  static constexpr canid_t id = 0x02040000 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 2;
   __u16 enable = 0;
 };
@@ -110,9 +110,9 @@ enum class EFeedbackDevice : __u8 {
 
 struct ctrl5 {
   // 0x02040100, primary control, 50ms period
-  static constexpr canid_t id = 0x02040100;
+  static constexpr canid_t id = 0x02040100 | CAN_EFF_FLAG;
   static constexpr __u8 payload_sz = 8;
-  __u64 data;
+  __u64 data = 0;
 
   void set_demand(__u32 value, EControlMode ctrl_mode) {
     data &= ~(0xffull << 16ull);
@@ -123,6 +123,11 @@ struct ctrl5 {
     data |= (value & 0x0000ffull) << 32ull;
     data &= ~(0xfull << 52ull);
     data |= (__u8(ctrl_mode) & 0xfull) << 52ull;
+  }
+
+  void set_ramp_throttle(uint8_t ramp) {
+    data &= ~(0xffull << 56ull);
+    data |= (ramp & 0xffull) << 56ull;
   }
 
   void set_override_limit_switch_en(ELimitSwitchOverride mode) {
@@ -162,6 +167,7 @@ struct talon_srx {
     m_ctrl5->set_override_limit_switch_en(
         ELimitSwitchOverride::UseDefaultsFromFlash);
     m_ctrl5->set_feedback_device(EFeedbackDevice::AnalogPot);
+    m_ctrl5->set_ramp_throttle(128);
   }
 
   int32_t get_sensor_position() const {
@@ -175,7 +181,7 @@ struct talon_srx {
   uint8_t get_temp() const { return m_status4->get_temp(); }
 
   can_input_state get_can_input_state() const {
-    return {get_sensor_position(), get_current(), get_batt_v(), get_temp()};
+    return {__builtin_bswap32(get_sensor_position()), __builtin_bswap16(get_current()), get_batt_v(), get_temp()};
   }
 
   void set_demand(int32_t demand) {
@@ -184,7 +190,7 @@ struct talon_srx {
 
   void set_can_output_state(const can_output_state &state) {
     m_watchdog = true;
-    set_demand(state.demand);
+    set_demand(__builtin_bswap32(state.demand));
   }
 };
 

@@ -35,7 +35,7 @@ constexpr struct station_info {
   uint32_t dap_mod_ident = 2;
   uint32_t dev_module_ident = 0x00000031;
   uint32_t dev_submodule_ident = 0x00000001;
-  uint16_t dev_max_slot = 4;
+  uint16_t dev_max_slot = 16;
   pnet_submodule_dir_t dev_dir = PNET_DIR_IO;
   uint16_t dev_length_input = sizeof(can_input_state);
   uint16_t dev_length_output = sizeof(can_output_state);

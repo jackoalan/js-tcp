@@ -57,8 +57,7 @@ bool can_if::write_messages() {
     t.m_##struc##_rem = cycle_div;                                             \
     if (!write_message(t.m_##struc))                                           \
       return false;                                                            \
-  }                                                                            \
-  break;
+  }
 #include "can_if.def"
   }
 
@@ -69,6 +68,8 @@ bool can_if::write_message(const can_frame &frame) const {
   int nbytes;
   if ((nbytes = ::write(m_can_sock, &frame, sizeof(frame))) == -1) {
     return_if_interrupted;
+    if (errno == ENOBUFS)
+      return true;
     std::cerr << "bad can write " << strerror(errno) << std::endl;
     return true;
   }
@@ -85,8 +86,10 @@ talon_srx &can_if::find_or_create_talon(canid_t id) {
   auto search =
       std::find_if(m_talons.begin(), m_talons.end(),
                    [id](const talon_srx &t) { return t.m_dev_id == id; });
-  if (search == m_talons.end())
+  if (search == m_talons.end()) {
+    std::cerr << "Created talon " << id << std::endl;
     return m_talons.emplace_back(id);
+  }
   return *search;
 }
 
@@ -137,9 +140,9 @@ int can_if::event_loop(pnet_if &pnet, uint32_t periodic_us) {
         return 1;
       return_if_interrupted;
       if (--rem_can_cycles == 0) {
+        rem_can_cycles = can_cycle_div;
         if (!write_messages())
           return errno != EINTR;
-        rem_can_cycles = can_cycle_div;
       }
       continue;
     }
@@ -154,6 +157,8 @@ int can_if::event_loop(pnet_if &pnet, uint32_t periodic_us) {
     if (FD_ISSET(m_can_sock, &read_fds)) {
       if (!read_messages())
         return 0;
+      for (auto &t : m_talons)
+        pnet.send_updates(t);
     }
   }
 

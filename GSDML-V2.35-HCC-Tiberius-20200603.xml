@@ -59,7 +59,7 @@
                         </PortSubmoduleItem>
                     </SystemDefinedSubmoduleList>
                 </DeviceAccessPointItem>
-                <DeviceAccessPointItem ID="IDD_2" PNIO_Version="V2.35" PhysicalSlots="0..4" ModuleIdentNumber="0x00000002" MinDeviceInterval="32" DNS_CompatibleName="can.robot" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+                <DeviceAccessPointItem ID="IDD_2" PNIO_Version="V2.35" PhysicalSlots="0..16" ModuleIdentNumber="0x00000002" MinDeviceInterval="32" DNS_CompatibleName="can.robot" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="true" NumberOfDeviceAccessAR="1" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
                     <ModuleInfo>
                         <Name TextId="IDT_MODULE_NAME_DAP1_CAN"/>
                         <InfoText TextId="IDT_INFO_DAP1_CAN"/>
@@ -71,7 +71,7 @@
                     <CertificationInfo ConformanceClass="A" ApplicationClass="" NetloadClass="I"/>
                     <IOConfigData MaxInputLength="244" MaxOutputLength="244"/>
                     <UseableModules>
-                        <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="1..4"/>
+                        <ModuleItemRef ModuleItemTarget="IDM_12" AllowedInSlots="1..16"/>
                     </UseableModules>
                     <VirtualSubmoduleList>
                         <VirtualSubmoduleItem ID="IDS_2" SubmoduleIdentNumber="0x00000001" Writeable_IM_Records="1 2 3" MayIssueProcessAlarm="false">
