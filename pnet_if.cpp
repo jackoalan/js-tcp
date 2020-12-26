@@ -16,7 +16,7 @@
 constexpr struct station_info {
   const char *device_string = "Tiberius";
 #ifdef TIBERIUS_JS
-  const char *station_name = "joystick.pilot";
+  const char *station_name = "js-rpi.pilot";
   os_ipaddr_t default_ip = 0x0A0A001E;
   const char *tmp_dir = "/pnet-js";
   const char *serial_number = "00001";
@@ -28,8 +28,8 @@ constexpr struct station_info {
   uint16_t dev_length_input = sizeof(joystick_state);
   uint16_t dev_length_output = 0;
 #elif defined(TIBERIUS_CAN)
-  const char *station_name = "can.robot";
-  os_ipaddr_t default_ip = 0x0A14001E;
+  const char *station_name = "can-rpi.robot";
+  os_ipaddr_t default_ip = 0x0A140014;
   const char *tmp_dir = "/pnet-can";
   const char *serial_number = "00002";
   uint32_t dap_mod_ident = 2;
