@@ -1,10 +1,10 @@
 #include "can_if.h"
+#include "pnet_if.h"
+#include "timespec_util.h"
 #include <cstring>
 #include <iostream>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include "timespec_util.h"
-#include "pnet_if.h"
 
 extern bool volatile g_terminate;
 
@@ -42,6 +42,8 @@ bool can_if::read_messages() {
     default:
       break;
     }
+
+    m_messages_read = true;
   }
 }
 
@@ -144,9 +146,7 @@ int can_if::event_loop(pnet_if &pnet, uint32_t periodic_us) {
         if (!write_messages())
           return errno != EINTR;
       }
-      continue;
-    }
-    if (n_fd_trig == -1) {
+    } else if (n_fd_trig == -1) {
       return_if_interrupted;
       std::cerr << "error calling pselect(): " << std::strerror(errno)
                 << std::endl;
@@ -154,9 +154,10 @@ int can_if::event_loop(pnet_if &pnet, uint32_t periodic_us) {
     }
 
     /* Handle can read events */
-    if (FD_ISSET(m_can_sock, &read_fds)) {
-      if (!read_messages())
-        return 0;
+    if (!read_messages())
+      return 0;
+    if (m_messages_read) {
+      m_messages_read = false;
       for (auto &t : m_talons)
         pnet.send_updates(t);
     }

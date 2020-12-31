@@ -197,6 +197,7 @@ struct talon_srx {
 class can_if {
   fd m_can_sock;
   std::vector<talon_srx> m_talons;
+  bool m_messages_read = false;
   bool read_messages();
   bool write_messages(); // Call every 10ms
   bool write_message(const can_frame &frame) const;
