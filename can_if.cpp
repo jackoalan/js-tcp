@@ -12,6 +12,25 @@ extern bool volatile g_terminate;
   if (errno == EINTR)                                                          \
   return false
 
+bool can_if::update_read_messages(pnet_if &pnet) {
+  /* Read all incoming can messages and route to talon records */
+  if (!read_messages())
+    return false;
+
+  /* Update profinet for each talon if new data has been read */
+  if (m_messages_read) {
+    m_messages_read = false;
+    for (auto &t : m_talons) {
+      if (t.m_messages_read) {
+        t.m_messages_read = false;
+        pnet.send_updates(t);
+      }
+    }
+  }
+
+  return true;
+}
+
 bool can_if::read_messages() {
   struct can_frame frame {};
 
@@ -30,30 +49,34 @@ bool can_if::read_messages() {
       return false;
     }
 
+    /* lower 10 bits is the talon's unique id */
     canid_t dev_id = frame.can_id & 0x3fu;
     talon_srx &t = find_or_create_talon(dev_id);
 
+    /* upper 19 bits is the status record within the talon */
     switch (frame.can_id & ~0x3fu) {
 #define CAN_FRAME_RECV(struc)                                                  \
   case struc::id:                                                              \
     static_cast<can_frame &>(t.m_##struc) = frame;                             \
+    t.m_messages_read = true;                                                  \
+    m_messages_read = true;                                                    \
     break;
 #include "can_if.def"
     default:
       break;
     }
-
-    m_messages_read = true;
   }
 }
 
 bool can_if::write_messages() {
   for (auto &t : m_talons) {
-    // The watchdog is set as long as error-free profinet data is available
-    // since last CAN cycle
+    /* The watchdog is set as long as error-free profinet data is available
+     * since last CAN cycle */
     if (!t.m_watchdog)
       continue;
     t.m_watchdog = false;
+
+    /* Conditionally send can messages based on cycle interval */
 #define CAN_FRAME_SEND(struc, cycle_div)                                       \
   if (--t.m_##struc##_rem == 0) {                                              \
     t.m_##struc##_rem = cycle_div;                                             \
@@ -138,28 +161,31 @@ int can_if::event_loop(pnet_if &pnet, uint32_t periodic_us) {
                              nullptr)) == 0) {
       /* timeout occurred - handle periodic updates */
       set_next_update();
+
+      /* first ensure profinet has latest can read data */
+      if (!update_read_messages(pnet))
+        return 0;
+
+      /* profinet communication cycle */
       if (pnet.periodic(*this))
         return 1;
       return_if_interrupted;
+
+      /* perform can write cycle every 10ms */
       if (--rem_can_cycles == 0) {
         rem_can_cycles = can_cycle_div;
         if (!write_messages())
           return errno != EINTR;
       }
     } else if (n_fd_trig == -1) {
+      /* pselect error (normally just EINTR for program termination) */
       return_if_interrupted;
       std::cerr << "error calling pselect(): " << std::strerror(errno)
                 << std::endl;
-      continue;
-    }
-
-    /* Handle can read events */
-    if (!read_messages())
-      return 0;
-    if (m_messages_read) {
-      m_messages_read = false;
-      for (auto &t : m_talons)
-        pnet.send_updates(t);
+    } else if (FD_ISSET(m_can_sock, &read_fds)) {
+      /* can read data available */
+      if (!update_read_messages(pnet))
+        return 0;
     }
   }
 

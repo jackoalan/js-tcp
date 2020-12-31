@@ -160,6 +160,7 @@ struct talon_srx {
 #define CAN_FRAME_SEND(struc, cycle_div) int m_##struc##_rem = cycle_div;
 #include "can_if.def"
   bool m_watchdog = false;
+  bool m_messages_read = false;
   explicit talon_srx(canid_t dev_id)
       : m_dev_id(dev_id)
 #define CAN_FRAME_DEF(struc) , m_##struc(dev_id)
@@ -181,16 +182,15 @@ struct talon_srx {
   uint8_t get_temp() const { return m_status4->get_temp(); }
 
   can_input_state get_can_input_state() const {
-    return {__builtin_bswap32(get_sensor_position()), __builtin_bswap16(get_current()), get_batt_v(), get_temp()};
+    return {int32_t(__builtin_bswap32(get_sensor_position())),
+            __builtin_bswap16(get_current()), get_batt_v(), get_temp()};
   }
 
   void set_demand(int32_t demand) {
     m_ctrl5->set_demand(demand, EControlMode::Throttle);
   }
 
-  void set_ramp_throttle(uint8_t ramp) {
-    m_ctrl5->set_ramp_throttle(ramp);
-  }
+  void set_ramp_throttle(uint8_t ramp) { m_ctrl5->set_ramp_throttle(ramp); }
 
   void set_can_output_state(const can_output_state &state) {
     m_watchdog = true;
@@ -203,6 +203,7 @@ class can_if {
   fd m_can_sock;
   std::vector<talon_srx> m_talons;
   bool m_messages_read = false;
+  bool update_read_messages(pnet_if &pnet);
   bool read_messages();
   bool write_messages(); // Call every 10ms
   bool write_message(const can_frame &frame) const;
