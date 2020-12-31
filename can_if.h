@@ -150,6 +150,7 @@ struct can_input_state {
 
 struct can_output_state {
   int32_t demand;
+  uint8_t ramp;
 };
 
 struct talon_srx {
@@ -167,7 +168,6 @@ struct talon_srx {
     m_ctrl5->set_override_limit_switch_en(
         ELimitSwitchOverride::UseDefaultsFromFlash);
     m_ctrl5->set_feedback_device(EFeedbackDevice::AnalogPot);
-    m_ctrl5->set_ramp_throttle(128);
   }
 
   int32_t get_sensor_position() const {
@@ -188,9 +188,14 @@ struct talon_srx {
     m_ctrl5->set_demand(demand, EControlMode::Throttle);
   }
 
+  void set_ramp_throttle(uint8_t ramp) {
+    m_ctrl5->set_ramp_throttle(ramp);
+  }
+
   void set_can_output_state(const can_output_state &state) {
     m_watchdog = true;
     set_demand(__builtin_bswap32(state.demand));
+    set_ramp_throttle(state.ramp);
   }
 };
 

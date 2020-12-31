@@ -166,6 +166,7 @@
                                 </Input>
                                 <Output Consistency="All items consistency">
                                     <DataItem DataType="Integer32" TextId="TOK_Output_Demand"/>
+                                    <DataItem DataType="Unsigned8" TextId="TOK_Output_Ramp"/>
                                 </Output>
                             </IOData>
                             <ModuleInfo>
@@ -228,6 +229,7 @@
                     <Text TextId="TOK_Input_Temp" Value="Temperature"/>
 
                     <Text TextId="TOK_Output_Demand" Value="Demand"/>
+                    <Text TextId="TOK_Output_Ramp" Value="Ramp"/>
                 </PrimaryLanguage>
             </ExternalTextList>
         </ApplicationProcess>
