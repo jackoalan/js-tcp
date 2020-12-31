@@ -167,9 +167,6 @@
                                 <Output Consistency="All items consistency">
                                     <DataItem DataType="Integer32" TextId="TOK_Output_Demand"/>
                                     <DataItem DataType="Unsigned8" TextId="TOK_Output_Ramp"/>
-                                    <DataItem DataType="Unsigned8" TextId="TOK_Output_Padding"/>
-                                    <DataItem DataType="Unsigned8" TextId="TOK_Output_Padding"/>
-                                    <DataItem DataType="Unsigned8" TextId="TOK_Output_Padding"/>
                                 </Output>
                             </IOData>
                             <ModuleInfo>
@@ -233,7 +230,6 @@
 
                     <Text TextId="TOK_Output_Demand" Value="Demand"/>
                     <Text TextId="TOK_Output_Ramp" Value="Ramp"/>
-                    <Text TextId="TOK_Output_Padding" Value="Padding"/>
                 </PrimaryLanguage>
             </ExternalTextList>
         </ApplicationProcess>
