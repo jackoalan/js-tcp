@@ -146,12 +146,12 @@ struct can_input_state {
   uint16_t current;
   uint8_t batt_v;
   uint8_t temp;
-};
+} __attribute__((packed));
 
 struct can_output_state {
   int32_t demand;
   uint8_t ramp;
-};
+} __attribute__((packed));
 
 struct talon_srx {
   canid_t m_dev_id;
